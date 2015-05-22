@@ -21,33 +21,29 @@
  * 
  */
 
-define(function (require, exports, module) {
+define(function (require, exports) {
     "use strict";
 
-    // namespaced raw (unsynchronized) actions
-    module.exports = {
-        application: require("./application"),
-        dialog: require("./dialog"),
-        documents: require("./documents"),
-        edit: require("./edit"),
-        example: require("./example"),
-        history: require("./history"),
-        keyevents: require("./keyevents"),
-        layers: require("./layers"),
-        layerEffects: require("./layereffects"),
-        menu: require("./menu"),
-        policy: require("./policy"),
-        preferences: require("./preferences"),
-        shapes: require("./shapes"),
-        shortcuts: require("./shortcuts"),
-        superselect: require("./superselect"),
-        tools: require("./tools"),
-        transform: require("./transform"),
-        type: require("./type"),
-        ui: require("./ui"),
-        help: require("./help"),
-        search: require("./search"),
-        draganddrop: require("./draganddrop"),
-        libraries: require("./libraries")
+    var Promise = require("bluebird");
+
+    var events = require("../events");
+
+    /**
+     * After startup, load the libraries
+     * 
+     * @return {Promise}
+     */
+    var afterStartupCommand = function () {
+        this.dispatch(events.libraries.FAKE_DATA, {});
+
+        return Promise.resolve();
     };
+
+    var afterStartup = {
+        command: afterStartupCommand,
+        reads: [],
+        writes: []
+    };
+
+    exports.afterStartup = afterStartup;
 });
