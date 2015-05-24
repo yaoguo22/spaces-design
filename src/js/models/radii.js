@@ -28,6 +28,7 @@ define(function (require, exports, module) {
 
     var unit = require("js/util/unit"),
         objUtil = require("js/util/object"),
+        cache = require("js/util/cache"),
         contentLib = require("adapter/lib/contentLayer");
 
     /**
@@ -59,7 +60,7 @@ define(function (require, exports, module) {
         bottomLeft: 0
     });
 
-    Object.defineProperties(Radii.prototype, objUtil.cachedGetSpecs({
+    cache.defineDerivedProperties(Radii.prototype, {
         /**
          * Convert the set of border radii to a single scalar, or null of the radii
          * are disequal.
@@ -75,7 +76,7 @@ define(function (require, exports, module) {
                 return null;
             }
         }
-    }));
+    });
 
     /**
      * Construct a Radii object from the given Photoshop layer descriptor.
