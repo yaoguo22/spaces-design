@@ -24,6 +24,8 @@
 define(function (require, exports) {
     "use strict";
 
+    var log = require("js/util/log");
+
     var _derivedProperties = new Map();
 
     var defineDerivedProperty = function (proto, prop, get, validate) {
@@ -189,18 +191,18 @@ define(function (require, exports) {
     };
 
     var migrate = function (previous, next) {
-        for (var propObj of _derivedProperties.values()) {
+        _derivedProperties.forEach(function (propObj) {
             var cache = propObj.cache;
 
             // The cache has already been migrated to the next structure.
             if (cache.get(next)) {
-                continue;
+                return;
             }
 
             // There is no cached information to migrate from the previous structure.
             var cacheRec = cache.get(previous);
             if (cacheRec === undefined) {
-                continue;
+                return;
             }
 
             // Note that whenever a cache record has a previous reference, it
@@ -224,39 +226,25 @@ define(function (require, exports) {
             } else {
                 throw new Error("Cache records must have either a value or previous reference");
             }
-        }
+        });
 
         return next;
     };
 
     var printStats = function () {
-        var allStats = [],
-            prop,
-            propObj,
-            stats,
-            time,
-            cacheMiss,
-            cacheMissInvalidate,
-            cacheMissTotal,
-            cacheHit,
-            cacheHitMigrate,
-            cacheHitTotal,
-            lookupMiss,
-            lookupHit;
+        var allStats = [];
 
-        for (var it of _derivedProperties) {
-            prop = it[0];
-            propObj = it[1];
-            stats = propObj.stats;
-            time = stats.time,
-            cacheMiss = stats.cacheMiss;
-            cacheMissInvalidate = stats.cacheMissInvalidate;
-            cacheMissTotal = cacheMiss + cacheMissInvalidate;
-            cacheHit = stats.cacheHit;
-            cacheHitMigrate = stats.cacheHitMigrate;
-            cacheHitTotal = cacheHit + cacheHitMigrate;
-            lookupMiss = stats.lookupMiss;
-            lookupHit = stats.lookupHit;
+        _derivedProperties.forEach(function (propObj, prop) {
+            var stats = propObj.stats,
+                time = stats.time,
+                cacheMiss = stats.cacheMiss,
+                cacheMissInvalidate = stats.cacheMissInvalidate,
+                cacheMissTotal = cacheMiss + cacheMissInvalidate,
+                cacheHit = stats.cacheHit,
+                cacheHitMigrate = stats.cacheHitMigrate,
+                cacheHitTotal = cacheHit + cacheHitMigrate,
+                lookupMiss = stats.lookupMiss,
+                lookupHit = stats.lookupHit;
 
             allStats.push({
                 prop: prop,
@@ -271,8 +259,9 @@ define(function (require, exports) {
                 lookupMiss: lookupMiss,
                 lookupHit: lookupHit
             });
-        }
-        console.table(allStats);
+        });
+
+        log.table(allStats);
     };
 
     exports.defineDerivedProperty = defineDerivedProperty;
