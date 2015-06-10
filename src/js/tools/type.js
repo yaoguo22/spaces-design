@@ -47,7 +47,6 @@ define(function (require, exports, module) {
         Tool.call(this, "typeCreateOrEdit", "Type", "typeCreateOrEditTool", selectHandler);
 
         this.activationKey = "t";
-        this.hideTransformControls = true;
     };
     util.inherits(TypeTool, Tool);
 
