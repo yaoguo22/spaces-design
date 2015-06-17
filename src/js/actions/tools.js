@@ -204,7 +204,14 @@ define(function (require, exports) {
         return this.transfer(selectTool, toolStore.getToolByID("newSelect"));
     };
 
-    var setPoliciesCommand = function () {
+    /**
+     * Resets the pointer policies around the selection border so we can pass
+     * pointer events to Photoshop for transforming, but still be able to
+     * click through to other layers
+     *
+     * @return {Promise}
+     */
+    var resetBorderPoliciesCommand = function () {
         var toolStore = this.flux.store("tool"),
             appStore = this.flux.store("application"),
             uiStore = this.flux.store("ui"),
@@ -461,8 +468,8 @@ define(function (require, exports) {
         writes: [locks.PS_DOC, locks.JS_DOC]
     };
 
-    var setPolicies = {
-        command: setPoliciesCommand,
+    var resetBorderPolicies = {
+        command: resetBorderPoliciesCommand,
         reads: [locks.JS_APP, locks.JS_TOOL],
         writes: [locks.PS_APP, locks.JS_POLICY]
     };
@@ -483,7 +490,7 @@ define(function (require, exports) {
 
     exports.installShapeDefaults = installShapeDefaults;
     exports.resetSuperselect = resetSuperselect;
-    exports.setPolicies = setPolicies;
+    exports.setBorderPolicies = resetBorderPolicies;
     exports.select = selectTool;
     exports.initTool = initTool;
     exports.changeModalState = changeModalState;
