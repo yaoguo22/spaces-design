@@ -25,14 +25,12 @@ define(function (require, exports) {
     "use strict";
 
     var Promise = require("bluebird"),
-        CCLibraries = require("ccLibraries"),
-        Immutable = require("immutable"),
-        descriptor = require("adapter/ps/descriptor");
+        CCLibraries = require("ccLibraries");
 
     var events = require("../events");
 
-    var _accessToken = null,
-        _userGUID = null;
+    // var _accessToken = null,
+    //     _userGUID = null;
 
     /**
      * Given a library instance, will prepare the elements of the library
@@ -85,19 +83,24 @@ define(function (require, exports) {
     var beforeStartupCommand = function () {
         var dependencies = {
             vulcanCall: function (requestType, requestPayload, responseType, callback) {
+                // FIXME: Eventually we need to acquire the actual port, preferably exporting it through PS
                 callback(JSON.stringify({ port: 12666 }));
             }
         };
 
+        // SHARED_LOCAL_STORAGE flag forces websocket use
         CCLibraries.configure(dependencies, {
             SHARED_LOCAL_STORAGE: true
         });
 
-        return descriptor.getProperty("application", "designSpaceLibrariesIMSInfo")
-            .then(function (imsStatus) {
-                _accessToken = imsStatus.imsAccessToken;
-                _userGUID = imsStatus.user;
-            });
+        return Promise.resolve();
+        
+        // Currently unused
+        // return descriptor.getProperty("application", "designSpaceLibrariesIMSInfo")
+        //     .then(function (imsStatus) {
+        //         _accessToken = imsStatus.imsAccessToken;
+        //         _userGUID = imsStatus.user;
+        //     });
     };
 
     /**
@@ -106,19 +109,13 @@ define(function (require, exports) {
      * @return {Promise}
      */
     var afterStartupCommand = function () {
-        // var options = {
-        //     STORAGE_HOSTNAME: "cc-api-storage-stage.adobe.io",
-        //     WAIT_FOR: "all",
-        //     USER_GUID: _userGUID,
-        //     getAccessToken: getAccessToken
-        // };
-        
         var libraryCollection = CCLibraries.getLoadedCollections();
 
         if (!libraryCollection) {
             return Promise.resolve();
         }
 
+        // FIXME: Do we eventually need to handle other collections?
         var payload = {
             libraries: libraryCollection[0].libraries
         };
