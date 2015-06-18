@@ -70,7 +70,7 @@ define(function (require, exports) {
     var _startup = function () {
         var startTime = Date.now(),
             version = adapter.version;
-
+console.profile("start");
         log.info("Spaces plugin version: %d.%d.%d",
             version.major, version.minor, version.patch);
 
@@ -95,6 +95,7 @@ define(function (require, exports) {
 
         Promise.join(renderPromise, startupPromises, function () {
             log.info("Startup complete: %dms", Date.now() - startTime);
+            console.profileEnd();
         });
     };
 
