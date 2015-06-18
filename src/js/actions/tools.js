@@ -322,19 +322,12 @@ define(function (require, exports) {
      */
     var changeModalStateCommand = function (modalState) {
         var toolPromise = this.dispatchAsync(events.tool.MODAL_STATE_CHANGE, {
-            modalState: modalState
-        });
-
-        var overlayPromise;
-
-        if (modalState) {
+                modalState: modalState
+            }),
             overlayPromise = this.dispatchAsync(events.ui.TOGGLE_OVERLAYS, {
-                enabled: false
+                enabled: !modalState
             });
-        } else {
-            overlayPromise = Promise.resolve();
-        }
-
+        
         return Promise.join(toolPromise, overlayPromise);
     };
 
@@ -490,7 +483,7 @@ define(function (require, exports) {
 
     exports.installShapeDefaults = installShapeDefaults;
     exports.resetSuperselect = resetSuperselect;
-    exports.setBorderPolicies = resetBorderPolicies;
+    exports.resetBorderPolicies = resetBorderPolicies;
     exports.select = selectTool;
     exports.initTool = initTool;
     exports.changeModalState = changeModalState;

@@ -67,10 +67,22 @@ define(function (require, exports, module) {
                 "$Abbx": true // Don't show transform controls
             };
 
-            return descriptor.playObject(toolLib.setToolOptions("moveTool", toolOptions));
+            return descriptor.playObject(toolLib.setToolOptions("moveTool", toolOptions))
+                .then(function () {
+                    UI.setPointerPropagationMode({
+                        defaultMode: UI.pointerPropagationMode.ALPHA_PROPAGATE_WITH_ADVISE
+                    });
+                });
+        };
+
+        var deselectHandler = function () {
+            return UI.setPointerPropagationMode({
+                defaultMode: UI.pointerPropagationMode.ALPHA_PROPAGATE
+            });
         };
 
         this.selectHandler = selectHandler;
+        this.deselectHandler = deselectHandler;
 
         var escapeKeyPolicy = new KeyboardEventPolicy(UI.policyAction.NEVER_PROPAGATE,
                 OS.eventKind.KEY_DOWN, null, OS.eventKeyCode.ESCAPE),

@@ -32,6 +32,8 @@ define(function (require, exports, module) {
         d3 = require("d3"),
         _ = require("lodash");
 
+    var OS = require("adapter/os");
+
     var system = require("js/util/system"),
         uiUtil = require("js/util/ui");
 
@@ -130,6 +132,7 @@ define(function (require, exports, module) {
             window.removeEventListener("mousemove", this.marqueeUpdater);
             window.removeEventListener("mouseup", this.mouseUpHandler);
             window.removeEventListener("mousedown", this.mouseDownHandler);
+            OS.removeListener("externalMouseMove", this.mouseMoveHandler);
         },
 
         componentDidMount: function () {
@@ -145,11 +148,23 @@ define(function (require, exports, module) {
             window.addEventListener("mousemove", this.marqueeUpdater);
             window.addEventListener("mouseup", this.mouseUpHandler);
             window.addEventListener("mousedown", this.mouseDownHandler);
+            OS.addListener("externalMouseMove", this.mouseMoveHandler);
         },
 
         componentDidUpdate: function () {
             if (!this.state.modalState) {
                 this._drawDebounced();
+            }
+        },
+
+        mouseMoveHandler: function (event) {
+            if (this.isMounted()) {
+                this._currentMouseX = event.location[0];
+                this._currentMouseY = event.location[1];
+                if (this.state.marqueeEnabled) {
+                    this.updateMarqueeRect();
+                }
+                this.updateMouseOverHighlights();
             }
         },
 
@@ -219,7 +234,6 @@ define(function (require, exports, module) {
          */
         drawBoundRectangles: function (svg, layerTree) {
             var indexOf = layerTree.indexOf.bind(layerTree),
-                marquee = this.state.marqueeEnabled,
                 scale = this._scale,
                 renderLayers;
 
@@ -238,8 +252,8 @@ define(function (require, exports, module) {
             renderLayers.forEach(function (layer) {
                 var bounds = layerTree.childBounds(layer);
                     
-                // Skip empty bounds
-                if (!bounds || bounds.empty) {
+                // Skip empty and selected bounds
+                if (layer.selected || !bounds || bounds.empty) {
                     return;
                 }
 
@@ -248,14 +262,14 @@ define(function (require, exports, module) {
                 var offset = system.isMac ? 0 : scale;
 
                 var boundRect = this._scrimGroup
-                        .append("rect")
-                        .attr("x", bounds.left + offset)
-                        .attr("y", bounds.top + offset)
-                        .attr("width", bounds.width)
-                        .attr("height", bounds.height)
-                        .attr("layer-id", layer.id)
-                        .attr("id", "layer-" + layer.id)
-                        .classed("layer-bounds", true);
+                    .append("rect")
+                    .attr("x", bounds.left + offset)
+                    .attr("y", bounds.top + offset)
+                    .attr("width", bounds.width)
+                    .attr("height", bounds.height)
+                    .attr("layer-id", layer.id)
+                    .attr("id", "layer-" + layer.id)
+                    .classed("layer-bounds", true);
 
                 if (layer.isArtboard) {
                     var nameBounds = uiUtil.getNameBadgeBounds(bounds, scale),
@@ -267,37 +281,20 @@ define(function (require, exports, module) {
                         ],
                         namePoints = namePointCoords.map(function (coord) {
                             return coord.x + "," + coord.y;
-                        }).join(" "),
-                        nameRect = this._scrimGroup.append("polygon")
-                            .attr("points", namePoints)
-                            .attr("id", "name-badge-" + layer.id)
-                            .classed("layer-artboard-bounds", true);
-
-                    nameRect.on("mouseover", function () {
-                        d3.select("#layer-" + layer.id)
-                            .classed("layer-bounds-hover", true)
-                            .style("stroke-width", 1.0 * scale);
-                    })
-                    .on("mouseout", function () {
-                        d3.select("#layer-" + layer.id)
-                            .classed("layer-bounds-hover", false)
-                            .style("stroke-width", 0.0);
-                    });
+                        }).join(" ");
+                        
+                    this._scrimGroup.append("polygon")
+                        .attr("points", namePoints)
+                        .attr("id", "name-badge-" + layer.id)
+                        .attr("layer-id", layer.id)
+                        .attr("x", nameBounds.left + offset)
+                        .attr("y", nameBounds.top + offset)
+                        .attr("width", nameBounds.width)
+                        .attr("height", nameBounds.height)
+                        .classed("artboard-name-rect", true)
+                        .classed("layer-artboard-bounds", true);
                 } else {
                     boundRect.classed("marqueeable", true);
-
-                    if (!marquee && !layer.selected) {
-                        boundRect.on("mouseover", function () {
-                            d3.select(this)
-                                .classed("layer-bounds-hover", true)
-                                .style("stroke-width", 1.0 * scale);
-                        })
-                        .on("mouseout", function () {
-                            d3.select(this)
-                                .classed("layer-bounds-hover", false)
-                                .style("stroke-width", 0.0);
-                        });
-                    }
                 }
             }, this);
 
@@ -388,6 +385,58 @@ define(function (require, exports, module) {
          */
         mouseDownHandler: function () {
             this._currentMouseDown = true;
+        },
+
+        updateMouseOverHighlights: function () {
+            var marquee = this.state.marqueeEnabled,
+                scale = this._scale,
+                uiStore = this.getFlux().store("ui"),
+                mouseX = this._currentMouseX,
+                mouseY = this._currentMouseY,
+                canvasMouse = uiStore.transformWindowToCanvas(mouseX, mouseY),
+                highlightFound = false;
+
+            // Yuck, we gotta traverse the list backwards, and D3 doesn't offer reverse iteration
+            _.forEachRight(d3.selectAll(".layer-bounds")[0], function (element) {
+                var layer = d3.select(element),
+                    layerLeft = parseInt(layer.attr("x")),
+                    layerTop = parseInt(layer.attr("y")),
+                    layerRight = layerLeft + parseInt(layer.attr("width")),
+                    layerBottom = layerTop + parseInt(layer.attr("height")),
+                    intersects = layerLeft < canvasMouse.x && layerRight > canvasMouse.x &&
+                        layerTop < canvasMouse.y && layerBottom > canvasMouse.y;
+
+                if (!marquee && !highlightFound && intersects) {
+                    layer.classed("layer-bounds-hover", true)
+                        .style("stroke-width", 1.0 * scale);
+                    highlightFound = true;
+                } else {
+                    layer.classed("layer-bounds-hover", true)
+                        .style("stroke-width", 0.0);
+                }
+            });
+
+            // Another yuck for artboard name badges
+            _.forEachRight(d3.selectAll(".artboard-name-rect")[0], function (element) {
+                var layer = d3.select(element),
+                    layerID = layer.attr("layer-id"),
+                    layerLeft = parseInt(layer.attr("x")),
+                    layerTop = parseInt(layer.attr("y")),
+                    layerRight = layerLeft + parseInt(layer.attr("width")),
+                    layerBottom = layerTop + parseInt(layer.attr("height")),
+                    intersects = layerLeft < canvasMouse.x && layerRight > canvasMouse.x &&
+                        layerTop < canvasMouse.y && layerBottom > canvasMouse.y;
+
+                if (!marquee && !highlightFound && intersects) {
+                    d3.select("#layer-" + layerID)
+                        .classed("layer-bounds-hover", true)
+                        .style("stroke-width", 1.0 * scale);
+                } else {
+                    d3.select("#layer-" + layerID)
+                        .classed("layer-bounds-hover", false)
+                        .style("stroke-width", 0.0);
+                }
+            });
         },
 
         /**
