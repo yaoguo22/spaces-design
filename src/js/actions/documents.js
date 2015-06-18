@@ -118,34 +118,23 @@ define(function (require, exports) {
      * @return {Promise.<object>}
      */
     var _getDocumentByRef = function (reference, properties, optionalProperties) {
-        var makeRefObj = function (property) {
-            return {
-                reference: reference,
-                property: property
-            };
-        };
-
         if (properties === undefined) {
             properties = _documentProperties;
         }
 
-        var refObjs = properties.map(makeRefObj),
-            documentPropertiesPromise = descriptor.batchGetProperties(refObjs)
-                .reduce(function (result, value, index) {
-                    var property = properties[index];
-                    result[property] = value;
-                    return result;
-                }, {});
+        var references = [reference],
+            documentPropertiesPromise = descriptor.batchMultiGetProperties(references, properties)
 
         if (optionalProperties === undefined) {
             optionalProperties = _optionalDocumentProperties;
         }
 
-        var optionalPropertiesPromise = descriptor.batchGetOptionalProperties(reference, optionalProperties);
+        var optionalPropertiesPromise = descriptor.batchMultiGetProperties(references, optionalProperties,
+            { continueOnError: true });
 
         return Promise.join(documentPropertiesPromise, optionalPropertiesPromise,
             function (properties, optionalProperties) {
-                return _.merge(properties, optionalProperties);
+                return _.zipWith(properties, optionalProperties, _.merge)[0];
             });
     };
 

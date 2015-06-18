@@ -99,67 +99,15 @@ define(function (require, exports) {
      * @return {Promise.<Array.<object>>}
      */
     var _getLayersByRef = function (references) {
-        var refObjs = references.reduce(function (refs, reference) {
-            return refs.concat(_layerProperties.map(function (property) {
-                return {
-                    reference: reference,
-                    property: property
-                };
-            }));
-        }, []);
+        references = references.toArray();
 
-        var layerPropertiesPromise = descriptor.batchGetProperties(refObjs)
-            .reduce(function (results, value, index) {
-                var propertyIndex = index % _layerProperties.length;
-
-                if (propertyIndex === 0) {
-                    results.push({});
-                }
-
-                var result = results[results.length - 1],
-                    property = _layerProperties[propertyIndex];
-
-                result[property] = value;
-                return results;
-            }, []);
-
-        var refObjsOptional = references.reduce(function (refs, reference) {
-            return refs.concat(_optionalLayerProperties.map(function (property) {
-                return {
-                    reference: reference,
-                    property: property
-                };
-            }));
-        }, []);
-
-        var optionalPropertiesPromise = descriptor.batchGetProperties(refObjsOptional, { continueOnError: true })
-            .then(function (response) {
-                var allResults = response[0];
-
-                return allResults.reduce(function (results, value, index) {
-                    var propertyIndex = index % _optionalLayerProperties.length;
-
-                    if (propertyIndex === 0) {
-                        results.push({});
-                    }
-
-                    var result = results[results.length - 1],
-                        property = _optionalLayerProperties[propertyIndex];
-
-                    if (value && value.hasOwnProperty(property)) {
-                        result[property] = value[property];
-                    }
-                    
-                    return results;
-                }, []);
-            });
+        var layerPropertiesPromise = descriptor.batchMultiGetProperties(references, _layerProperties),
+            optionalPropertiesPromise = descriptor.batchMultiGetProperties(references, _optionalLayerProperties,
+                { continueOnError: true });
 
         return Promise.join(layerPropertiesPromise, optionalPropertiesPromise,
-            function (allProperties, allOptionalProperties) {
-                return allProperties.map(function (properties, index) {
-                    var optionalProperties = allOptionalProperties[index];
-                    return _.assign(properties, optionalProperties);
-                });
+            function (required, optional) {
+                return _.zipWith(required, optional, _.merge);
             });
     };
 
