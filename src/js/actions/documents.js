@@ -122,19 +122,18 @@ define(function (require, exports) {
             properties = _documentProperties;
         }
 
-        var references = [reference],
-            documentPropertiesPromise = descriptor.batchMultiGetProperties(references, properties)
+        var documentPropertiesPromise = descriptor.multiGetProperties(reference, properties)
 
         if (optionalProperties === undefined) {
             optionalProperties = _optionalDocumentProperties;
         }
 
-        var optionalPropertiesPromise = descriptor.batchMultiGetProperties(references, optionalProperties,
+        var optionalPropertiesPromise = descriptor.multiGetProperties(reference, optionalProperties,
             { continueOnError: true });
 
         return Promise.join(documentPropertiesPromise, optionalPropertiesPromise,
             function (properties, optionalProperties) {
-                return _.zipWith(properties, optionalProperties, _.merge)[0];
+                return _.merge(properties, optionalProperties);
             });
     };
 

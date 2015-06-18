@@ -79,11 +79,9 @@ define(function (require, exports) {
         // encode an affine transformation from the window coordinate
         // space to the document canvas cooridinate space. 
         
-        return descriptor.batchMultiGetProperties([docRef], _transformProperties, { continueOnError: true })
+        return descriptor.multiGetProperties(docRef, _transformProperties, { continueOnError: true })
             .bind(this)
             .then(function (result) {
-                result = result[0];
-
                 var payload = {
                     transformMatrix: result.viewTransform,
                     zoom: result.zoom._value
